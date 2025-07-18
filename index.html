@@ -47,6 +47,7 @@
             border-radius: 10px;
             width: 100%;
             max-width: 600px;
+            position: relative;
         }
         #telaJogo.chat-aberto {
             margin-left: -20%;
@@ -93,6 +94,10 @@
             border: 1px solid #555555;
             width: calc(100% - 22px);
         }
+        #letraInput {
+            width: 50px;
+            text-align: center;
+        }
         textarea {
             resize: none;
             height: 60px;
@@ -133,13 +138,27 @@
         #forcaImagem.erro-4 { clip-path: inset(0 0 40% 0); }
         #forcaImagem.erro-5 { clip-path: inset(0 0 20% 0); }
         #forcaImagem.erro-6 { clip-path: inset(0 0 0 0); }
-        #palavra {
+        #palavra, #palavraJogador1 {
             font-size: 24px;
             margin: 20px 0;
         }
         #mensagem {
             font-size: 18px;
             color: #ffff00;
+        }
+        #mensagemLetraRepetida {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            color: #ff0000;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+            z-index: 1000;
+            text-align: center;
         }
         #exemploFrases {
             font-size: 16px;
@@ -250,19 +269,19 @@
     <div id="telaJogo">
         <div id="jogador1View" style="display: none;">
             <h2>Aguardando o amigo adivinhar...</h2>
-            <p>Palavra: <span id="palavraCompleta"></span></p>
-            <p>Letras adivinhadas: <span id="letrasAdivinhadasJogador1"></span></p>
+            <p>Palavra: <span id="palavraJogador1"></span></p>
+            <p>Letras já escolhidas: <span id="letrasAdivinhadasJogador1"></span></p>
         </div>
         <div id="jogador2View" style="display: none;">
             <h2>Adivinhe a palavra</h2>
             <p id="palavra"></p>
             <input type="text" id="letraInput" maxlength="1" placeholder="Digite uma letra">
-            <button id="adivinharBtn">Enviar</button>
         </div>
         <div id="forcaContainer">
             <img id="forcaImagem" src="https://raw.githubusercontent.com/psicspsix/Jogo-de-Forca/main/Lorca-Corpo-Completo.jpg" alt="Imagem da forca" onload="console.log('Imagem carregada:', this.src); document.getElementById('erroImagem').style.display = 'none';" onerror="console.error('Erro ao carregar imagem:', this.src); document.getElementById('erroImagem').style.display = 'block';">
             <div id="erroImagem">Erro: Não foi possível carregar a imagem.</div>
         </div>
+        <div id="mensagemLetraRepetida">Letra já digitada!</div>
         <p id="mensagem"></p>
         <p id="exemploFrases"></p>
         <p id="placar"></p>
@@ -369,6 +388,7 @@
                 }
                 if (papel === 'jogador2' && jogo.estado === 'em andamento') {
                     document.getElementById('letraInput').focus();
+                    console.log('Foco definido em letraInput (mostrarTela)');
                 }
                 console.log(`Tela jogo exibida: modo=${modo}, chatAberto=${chatAberto}, #chatBtn=${chatBtn.style.display}, #chatContainer=${chatContainer.style.display}`);
             }
@@ -416,6 +436,7 @@
                 update(ref(db, `jogos/${idJogo}`), { chatAberto: false });
                 if (papel === 'jogador2' && jogo.estado === 'em andamento') {
                     document.getElementById('letraInput').focus();
+                    console.log('Foco definido em letraInput (toggleChat)');
                 }
             }
             console.log(`Chat toggled: chatAberto=${chatAberto}, #chatContainer=${chatContainer.style.display}`);
@@ -462,15 +483,19 @@
             await carregarNovaPalavra();
             mostrarTela('jogo');
             exibirJogo();
+            document.getElementById('letraInput').focus();
+            console.log('Foco definido em letraInput (iniciarJogoSolo)');
         }
 
         async function jogarNovamente() {
             const imagemForca = document.getElementById('forcaImagem');
-            imagemForca.src = imagemOriginal; // Restaura a imagem original
-            imagemForca.className = 'erro-0'; // Reseta o estado da imagem
+            imagemForca.src = imagemOriginal;
+            imagemForca.className = 'erro-0';
             if (modo === 'solo') {
                 await carregarNovaPalavra();
                 exibirJogo();
+                document.getElementById('letraInput').focus();
+                console.log('Foco definido em letraInput (jogarNovamente, solo)');
                 document.getElementById('telaJogo').scrollIntoView({ behavior: 'smooth' });
             } else if (modo === 'multiplayer') {
                 try {
@@ -514,6 +539,8 @@
                         alert('Aguardando o Jogador 1 escolher uma nova palavra.');
                         mostrarTela('jogo');
                         exibirJogo();
+                        document.getElementById('letraInput').focus();
+                        console.log('Foco definido em letraInput (jogarNovamente, multiplayer, jogador2)');
                     }
                     await update(jogoRef, { estado: 'aguardando_palavra' });
                 } catch (error) {
@@ -550,8 +577,8 @@
                     placar: jogo.placar || {}
                 };
                 const imagemForca = document.getElementById('forcaImagem');
-                imagemForca.src = imagemOriginal; // Garante a imagem original ao carregar nova palavra
-                imagemForca.className = 'erro-0'; // Reseta o estado da imagem
+                imagemForca.src = imagemOriginal;
+                imagemForca.className = 'erro-0';
             } catch (error) {
                 console.error('Erro ao carregar palavra:', error);
                 alert('Erro ao carregar palavras do banco de dados.');
@@ -600,6 +627,10 @@
                         } else {
                             mostrarTela('jogo');
                             exibirJogo();
+                            if (papel === 'jogador2' && jogo.estado === 'em andamento') {
+                                document.getElementById('letraInput').focus();
+                                console.log('Foco definido em letraInput (onValue, jogador2)');
+                            }
                         }
                         if (jogo.chatAberto && !chatAberto) toggleChat();
                         else if (!jogo.chatAberto && chatAberto) toggleChat();
@@ -664,6 +695,10 @@
                     }
                     mostrarTela('jogo');
                     exibirJogo();
+                    if (jogo.estado === 'em andamento') {
+                        document.getElementById('letraInput').focus();
+                        console.log('Foco definido em letraInput (entrarJogo)');
+                    }
                     unsubscribeJogo = onValue(jogoRef, (snapshot) => {
                         if (snapshot.exists()) {
                             jogo = validateJogo(snapshot.val());
@@ -675,6 +710,10 @@
                             } else {
                                 mostrarTela('jogo');
                                 exibirJogo();
+                                if (papel === 'jogador2' && jogo.estado === 'em andamento') {
+                                    document.getElementById('letraInput').focus();
+                                    console.log('Foco definido em letraInput (onValue, entrarJogo)');
+                                }
                             }
                             if (jogo.chatAberto && !chatAberto) toggleChat();
                             else if (!jogo.chatAberto && chatAberto) toggleChat();
@@ -703,19 +742,23 @@
             console.log(`Exibindo jogo: papel=${papel}, estado=${jogo.estado}`);
             const imagemForca = document.getElementById('forcaImagem');
             if (jogo.estado === 'perdido') {
-                imagemForca.src = imagemDerrota; // Usa a imagem de derrota
-                imagemForca.className = ''; // Remove as classes de recorte para exibir a imagem completa
+                imagemForca.src = imagemDerrota;
+                imagemForca.className = '';
                 console.log(`Imagem de derrota exibida: src=${imagemForca.src}`);
             } else {
-                imagemForca.src = imagemOriginal; // Usa a imagem original
-                imagemForca.className = `erro-${jogo.erros}`; // Aplica a classe de erro
+                imagemForca.src = imagemOriginal;
+                imagemForca.className = `erro-${jogo.erros}`;
                 console.log(`Imagem atualizada: class=erro-${jogo.erros}, src=${imagemForca.src}`);
             }
             if (papel === 'jogador1' && jogo.estado !== 'aguardando_palavra') {
                 console.log('Mostrando tela de observação (#jogador1View) para Jogador 1');
                 document.getElementById('jogador1View').style.display = 'block';
                 document.getElementById('jogador2View').style.display = 'none';
-                document.getElementById('palavraCompleta').textContent = jogo.palavra;
+                const palavraOculta = jogo.palavra.split('').map((letra, i) => {
+                    const letraNormalizada = normalizarLetra(letra);
+                    return jogo.letrasAdivinhadas.some(l => normalizarLetra(l) === letraNormalizada) ? letra : '_';
+                }).join(' ');
+                document.getElementById('palavraJogador1').textContent = palavraOculta;
                 document.getElementById('letrasAdivinhadasJogador1').textContent = jogo.letrasAdivinhadas.join(', ');
             } else {
                 console.log('Mostrando tela de adivinhação (#jogador2View) para Jogador 2');
@@ -726,6 +769,10 @@
                     return jogo.letrasAdivinhadas.some(l => normalizarLetra(l) === letraNormalizada) ? letra : '_';
                 }).join(' ');
                 document.getElementById('palavra').textContent = palavraOculta;
+                if (papel === 'jogador2' && jogo.estado === 'em andamento') {
+                    document.getElementById('letraInput').focus();
+                    console.log('Foco definido em letraInput (exibirJogo)');
+                }
             }
             const botoesFimJogo = document.getElementById('botoesFimJogo');
             const botoesHTML = `
@@ -779,11 +826,20 @@
             const letra = document.getElementById('letraInput').value.trim().toLowerCase();
             if (!letra || letra.length !== 1 || !/[a-záéíóúâêîôûãõç]/.test(letra)) {
                 alert('Digite uma letra válida (a-z, acentos ou ç).');
+                document.getElementById('letraInput').value = '';
+                document.getElementById('letraInput').focus();
                 return;
             }
             const letraNormalizada = normalizarLetra(letra);
             if (jogo.letrasAdivinhadas.some(l => normalizarLetra(l) === letraNormalizada)) {
-                alert('Você já adivinhou essa letra.');
+                console.log(`Letra repetida: ${letra}`);
+                const mensagemRepetida = document.getElementById('mensagemLetraRepetida');
+                mensagemRepetida.style.display = 'block';
+                setTimeout(() => {
+                    mensagemRepetida.style.display = 'none';
+                }, 1000);
+                document.getElementById('letraInput').value = '';
+                document.getElementById('letraInput').focus();
                 return;
             }
             console.log(`Letra adivinhada: ${letra}, Normalizada: ${letraNormalizada}, Adivinhador: ${adivinhador}`);
@@ -870,26 +926,9 @@
             entrarJogo();
         });
 
-        document.getElementById('adivinharBtn').addEventListener('click', () => {
-            console.log('Botão Adivinhar clicado');
+        document.getElementById('letraInput').addEventListener('input', () => {
+            console.log('Evento input disparado no campo letraInput');
             adivinharLetra();
-        });
-
-        document.getElementById('chatBtn').addEventListener('click', () => {
-            console.log('Botão Abrir Chat clicado');
-            toggleChat();
-        });
-
-        document.getElementById('closeChatBtn').addEventListener('click', () => {
-            console.log('Botão Fechar Chat clicado');
-            toggleChat();
-        });
-
-        document.getElementById('letraInput').addEventListener('keypress', (event) => {
-            if (event.key === 'Enter') {
-                console.log('Tecla Enter pressionada no campo letraInput');
-                adivinharLetra();
-            }
         });
 
         document.getElementById('palavraInput').addEventListener('keypress', (event) => {
@@ -914,9 +953,18 @@
             }
         });
 
+        document.getElementById('chatBtn').addEventListener('click', () => {
+            console.log('Botão Abrir Chat clicado');
+            toggleChat();
+        });
+
+        document.getElementById('closeChatBtn').addEventListener('click', () => {
+            console.log('Botão Fechar Chat clicado');
+            toggleChat();
+        });
+
         window.jogarNovamente = jogarNovamente;
 
-        // Log para verificar carregamento inicial da imagem
         const imagemForca = document.getElementById('forcaImagem');
         imagemForca.onload = () => console.log('Imagem carregada com sucesso:', imagemForca.src);
         imagemForca.onerror = () => console.error('Erro ao carregar imagem:', imagemForca.src);
