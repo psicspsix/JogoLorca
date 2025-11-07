@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -419,8 +418,7 @@
                     unsubscribeChat();
                     unsubscribeChat = null;
                 }
-                jogo.placar = {};
-                console.log('Tela inicial exibida: #telaInicial=flex, #chatBtn=none, #chatContainer=none, placar reiniciado');
+                console.log('Tela inicial exibida: #telaInicial=flex, #chatBtn=none, #chatContainer=none');
             } else if (tela === 'jogo') {
                 telaJogo.style.display = 'block';
                 if (modo === 'multiplayer') {
@@ -579,8 +577,8 @@
                         chatAberto: false,
                         jogador1: novoJogador1,
                         jogador2: novoJogador2,
-                        jogador1Inicial: jogo.jogador1Inicial || jogo.jogador1,
-                        jogador2Inicial: jogo.jogador2Inicial || jogo.jogador2,
+                        jogador1Inicial: jogo.jogador1Inicial,
+                        jogador2Inicial: jogo.jogador2Inicial,
                         placar: placarAtual
                     });
                     await set(jogoRef, jogo);
@@ -648,6 +646,7 @@
                 alert('Digite uma palavra válida (apenas letras, incluindo acentos e ç).');
                 return;
             }
+            const isNewGame = !idJogo;
             modo = 'multiplayer';
             papel = 'jogador1';
             idJogo = idJogo || generateUniqueId();
@@ -670,7 +669,9 @@
             try {
                 const jogoRef = ref(db, `jogos/${idJogo}`);
                 await set(jogoRef, jogo);
-                alert(`Jogo criado! Compartilhe este ID com seu amigo: ${idJogo}`);
+                if (isNewGame) {
+                    alert(`Jogo criado! Compartilhe este ID com seu amigo: ${idJogo}`);
+                }
                 mostrarTela('jogo');
                 exibirJogo();
                 unsubscribeJogo = onValue(jogoRef, (snapshot) => {
@@ -846,8 +847,8 @@
                     ? `Placar: Jogador (${vitoriasJogador}) | Computador (${vitoriasComputador})`
                     : '';
             } else if (modo === 'multiplayer') {
-                const idJogador1 = jogo.jogador1Inicial || jogo.jogador1;
-                const idJogador2 = jogo.jogador2Inicial || jogo.jogador2;
+                const idJogador1 = jogo.jogador1Inicial;
+                const idJogador2 = jogo.jogador2Inicial;
                 const vitoriasJ1 = jogo.placar[idJogador1] ? jogo.placar[idJogador1].vitorias : 0;
                 const vitoriasJ2 = jogo.placar[idJogador2] ? jogo.placar[idJogador2].vitorias : 0;
                 if (!chatAberto) {
@@ -884,7 +885,13 @@
                 <button onclick="window.open('https://www.youtube.com/watch?v=BIAITFJ8uTI&t=82s', '_blank')">Vídeo Teacher Carlos</button>
             `;
             if (jogo.estado === 'vencido' || jogo.estado === 'perdido') {
-                document.getElementById('mensagem').textContent = jogo.estado === 'vencido' ? 'VOCÊ VENCEU!' : `VOCÊ PERDEU! A palavra era: ${jogo.palavra}`;
+                let mensagem = '';
+                if (jogo.estado === 'vencido') {
+                    mensagem = (papel === 'jogador2') ? 'VOCÊ VENCEU!' : `VOCÊ PERDEU! A palavra era: ${jogo.palavra}`;
+                } else if (jogo.estado === 'perdido') {
+                    mensagem = (papel === 'jogador2') ? `VOCÊ PERDEU! A palavra era: ${jogo.palavra}` : 'VOCÊ VENCEU!';
+                }
+                document.getElementById('mensagem').textContent = mensagem;
                 botoesFimJogo.innerHTML = botoesHTML;
                 botoesFimJogo.style.display = 'grid';
                 document.getElementById('telaJogo').scrollIntoView({ behavior: 'smooth' });
